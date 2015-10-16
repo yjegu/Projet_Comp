@@ -20,7 +20,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
   : ^(ASSIGN_KW e1=expression[symTab] IDENT 
       (
         {
-          code3a = genAssignExpr(symTab, e1, $IDENT.text);
+          code3a = Code3aGenerator.genAssignExpr(symTab, e1, $IDENT.text);
         }
       )
     )
@@ -41,7 +41,12 @@ block [SymbolTable symTab] returns [Code3a code3a]
 
 /* Instruction list */
 inst_list [SymbolTable symTab] returns [Code3a code3a]
-  : (statement[symTab])+
+  : ^(INST(
+      il=statement[symTab]
+      {
+        code3a = il;
+      }
+    )+)
 ;
 
 /* Expressions */
@@ -101,4 +106,32 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
       Operand3a id = symTab.lookup($IDENT.text);
       expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
     }
+;
+
+/* Declarations */
+declaration [SymbolTable symTab] returns [Code3a code3a]
+  : ^(DECL value = decl_list[symTab])
+    {
+      code3a = value;
+    }
+;
+
+/* List of declararations */
+decl_list [SymbolTable symTab] returns [Code3a code3a]
+    : (
+        (
+          value = decl_item[symTab]
+          {
+            code3a.append(value);
+          }
+        )+
+      )
+;
+
+/* The real declaration of one precised variable */
+decl_item [SymbolTable symTab] returns [Code3a code3a]
+  : IDENT 
+  {
+    code3a.append(Code3aGenerator.genDeclVar(symTab, $IDENT.text));
+  }
 ;

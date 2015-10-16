@@ -17,4 +17,16 @@ public class TypeCheck {
 			return Type.ERROR;
 		}
 	}
+
+	/**
+	 * Type checking for a variable declaration (Integer only)
+	 */
+	public static Type checkDeclType(Type t) {
+		if(t == Type.INT) {
+			return Type.INT;
+		}
+		else {
+			return Type.ERROR;
+		}
+	}
 }

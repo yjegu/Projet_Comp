@@ -36,7 +36,7 @@ public class Code3aGenerator {
 	}
 
 	/**
-	 * Generate 3a Code for assign variable
+	 * Generate 3a Code for assignation of a variable
 	 */
 	public static Code3a genAssignExpr(SymbolTable symTab, ExpAttribute exp, String name) {
 		Operand3a var = symTab.lookup(name);
@@ -47,7 +47,7 @@ public class Code3aGenerator {
 
 		else {
 			if(exp.type.isCompatible(var.type)) {
-				Inst3a inst = new Inst3a(TAC.COPY, var, exp.place, null);
+				Inst3a inst = new Inst3a(Inst3a.TAC.COPY, var, exp.place, null);
 				Code3a code = new Code3a(inst);
 				exp.code.append(code);
 			}
@@ -60,6 +60,27 @@ public class Code3aGenerator {
 		}
 
 		return exp.code;
+	}
+
+	/**
+	 * Generate 3a Code for declaration of a variable
+	 */
+	public static Code3a genDeclVar(SymbolTable symTab, String name) {
+		Operand3a var = symTab.lookup(name);
+		Code3a code = null;
+
+		if(var != null) {
+			System.err.println("Error, the variable " + name + " has already been declared");
+			System.exit(-1);
+		}
+
+		else {
+			var = new VarSymbol(Type.INT, name, symTab.getScope());
+			symTab.insert(name, var);
+			code = genVar(var);
+		}
+
+		return code;
 	}
 
 } // Code3aGenerator ***
