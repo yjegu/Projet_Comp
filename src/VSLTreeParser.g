@@ -1,23 +1,37 @@
 tree grammar VSLTreeParser;
 
+/* Options */
 options {
   language     = Java;
   tokenVocab   = VSLParser;
   ASTLabelType = CommonTree;
 }
 
+/* Axiom */
 s [SymbolTable symTab] returns [Code3a code]
-  : e=expression[symTab] { code = e.code; }
-;
-
-statement [SymbolTable symTab] returns [Code3a code3a]
-  : ^(ASSIGN_KW e1=expression[symTab])
+  : e=expression[symTab] 
     {
-      
+      code = e.code;
     }
-  | b=block[symTab] {code3a=b;}
 ;
 
+/* Instructions */
+statement [SymbolTable symTab] returns [Code3a code3a]
+  : ^(ASSIGN_KW e1=expression[symTab] IDENT 
+      (
+        {
+          code3a = genAssignExpr(symTab, e1, $IDENT.text);
+        }
+      )
+    )
+
+  | b=block[symTab]
+      {
+        code3a=b;
+      }
+;
+
+/* Block of code */
 block [SymbolTable symTab] returns [Code3a code3a]
   : ^(BLOCK il=inst_list[symTab])
     {
@@ -25,13 +39,15 @@ block [SymbolTable symTab] returns [Code3a code3a]
     }
 ;
 
+/* Instruction list */
 inst_list [SymbolTable symTab] returns [Code3a code3a]
-  : 
-  statement[symTab]
+  : (statement[symTab])+
 ;
 
+/* Expressions */
 expression [SymbolTable symTab] returns [ExpAttribute expAtt]
-  : ^(PLUS e1=expression[symTab] e2=expression[symTab]) 
+  : /* Addition operation */ 
+    ^(PLUS e1=expression[symTab] e2=expression[symTab]) 
     { 
       Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
       VarSymbol temp = SymbDistrib.newTemp();
@@ -39,8 +55,8 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
       expAtt = new ExpAttribute(ty, cod, temp);
     }
 
-    /* substraction operation */
-  | ^(MINUS e1=expression[symTab] e2=expression[symTab])
+  | /* Substraction operation */
+    ^(MINUS e1=expression[symTab] e2=expression[symTab])
     {
       Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
       VarSymbol temp = SymbDistrib.newTemp();
@@ -48,8 +64,8 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
       expAtt = new ExpAttribute(ty, cod, temp);
     }
 
-    /* multiplication operation */
-  | ^(MUL e1=expression[symTab] e2=expression[symTab])
+  | /* Multiplication operation */
+    ^(MUL e1=expression[symTab] e2=expression[symTab])
     {
       Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
       VarSymbol temp = SymbDistrib.newTemp();
@@ -57,8 +73,8 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
       expAtt = new ExpAttribute(ty, cod, temp);
     }
 
-    /* division operation */
-  | ^(DIV e1=expression[symTab] e2=expression[symTab])
+  | /* Division operation */
+    ^(DIV e1=expression[symTab] e2=expression[symTab])
     {
       Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
       VarSymbol temp = SymbDistrib.newTemp();
@@ -67,15 +83,19 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
     }
 
   | pe=primary_exp[symTab] 
-    { expAtt = pe; }
+    { 
+      expAtt = pe; 
+    }
 ;
 
+/* Primary expression */
 primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
   : INTEGER
     {
       ConstSymbol cs = new ConstSymbol(Integer.parseInt($INTEGER.text));
       expAtt = new ExpAttribute(Type.INT, new Code3a(), cs);
     }
+
   | IDENT
     {
       Operand3a id = symTab.lookup($IDENT.text);

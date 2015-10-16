@@ -35,4 +35,31 @@ public class Code3aGenerator {
 		return cod;
 	}
 
+	/**
+	 * Generate 3a Code for assign variable
+	 */
+	public static Code3a genAssignExpr(SymbolTable symTab, ExpAttribute exp, String name) {
+		Operand3a var = symTab.lookup(name);
+		if(var == null) {
+			System.err.println("Error, the variable " + name + " does not exist");
+			System.exit(-1);
+		}
+
+		else {
+			if(exp.type.isCompatible(var.type)) {
+				Inst3a inst = new Inst3a(TAC.COPY, var, exp.place, null);
+				Code3a code = new Code3a(inst);
+				exp.code.append(code);
+			}
+
+			else {
+				System.err.println("Error, the variable " + name + " has incorrect type : Assignation impossible");
+				System.exit(-1);
+			}
+			
+		}
+
+		return exp.code;
+	}
+
 } // Code3aGenerator ***
