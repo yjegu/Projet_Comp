@@ -8,16 +8,24 @@ options {
 }
 
 /* Axiom */
-s [SymbolTable symTab] returns [Code3a code]
-  : e=expression[symTab] 
+s [SymbolTable symTab] returns [Code3a code] 
+  :
+  /*e=expression[symTab] 
     {
+      System.out.println("expression");
       code = e.code;
+    }
+
+  |*/ st=statement[symTab]
+    {
+      System.out.println("declaration");
+      code = st;
     }
 ;
 
 /* Instructions */
 statement [SymbolTable symTab] returns [Code3a code3a]
-  : ^(ASSIGN_KW e1=expression[symTab] IDENT 
+  : /*^(ASSIGN_KW e1=expression[symTab] IDENT 
       (
         {
           code3a = Code3aGenerator.genAssignExpr(symTab, e1, $IDENT.text);
@@ -25,26 +33,48 @@ statement [SymbolTable symTab] returns [Code3a code3a]
       )
     )
 
-  | b=block[symTab]
+  |*/ b=block[symTab]
       {
+        System.out.println("statement");
+        //System.out.println(b);
         code3a=b;
       }
 ;
 
 /* Block of code */
 block [SymbolTable symTab] returns [Code3a code3a]
-  : ^(BLOCK il=inst_list[symTab])
+  : ^(BLOCK 
     {
-      code3a=il;
+      System.out.println("block0");
+      symTab.enterScope();
+    } 
+    d=declaration[symTab] il=inst_list[symTab])
+    {
+      System.out.println("block");
+      code3a = d;
+      System.out.println(d);
+      code3a.append(il);
+      symTab.leaveScope();
     }
+
+  | ^(BLOCK il=inst_list[symTab])
+    {
+      System.out.println("block2");
+      code3a = il;
+    }
+
 ;
 
 /* Instruction list */
 inst_list [SymbolTable symTab] returns [Code3a code3a]
+    @init
+    {
+      code3a = new Code3a();
+    }
   : ^(INST(
       il=statement[symTab]
       {
-        code3a = il;
+        code3a.append(il);
       }
     )+)
 ;
@@ -87,10 +117,20 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
       expAtt = new ExpAttribute(ty, cod, temp);
     }
 
+  | /* Unary negation */
+    ^(NEGAT e=expression[symTab])
+    {
+      Type ty = TypeCheck.checkUnOp(e.type);
+      VarSymbol temp = SymbDistrib.newTemp();
+      Code3a cod = Code3aGenerator.genUnOp(Inst3a.TAC.NEG, temp, e);
+      expAtt = new ExpAttribute(ty, cod, temp);
+    }
+
   | pe=primary_exp[symTab] 
     { 
       expAtt = pe; 
     }
+
 ;
 
 /* Primary expression */
@@ -110,22 +150,25 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
 
 /* Declarations */
 declaration [SymbolTable symTab] returns [Code3a code3a]
-  : ^(DECL value = decl_list[symTab])
+  : ^(DECL (value = decl_list[symTab]
     {
       code3a = value;
-    }
+    }))
 ;
 
 /* List of declararations */
 decl_list [SymbolTable symTab] returns [Code3a code3a]
-    : (
+    @init
+    {
+      code3a = new Code3a();
+    }
+    :
         (
           value = decl_item[symTab]
           {
             code3a.append(value);
           }
         )+
-      )
 ;
 
 /* The real declaration of one precised variable */

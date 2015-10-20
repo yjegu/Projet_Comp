@@ -36,6 +36,20 @@ public class Code3aGenerator {
 	}
 
 	/**
+	 * Generate code for a unary operation
+	 * 
+	 * @param op
+	 *            must be a code op: Inst3a.TAC.XXX
+	 */
+	public static Code3a genUnOp(Inst3a.TAC op, Operand3a temp, ExpAttribute exp) {
+		Code3a cod = exp.code;
+		cod.append(exp.code);
+		cod.append(genVar(temp));
+		cod.append(new Inst3a(op, temp, exp.place, null));
+		return cod;
+	}
+
+	/**
 	 * Generate 3a Code for assignation of a variable
 	 */
 	public static Code3a genAssignExpr(SymbolTable symTab, ExpAttribute exp, String name) {

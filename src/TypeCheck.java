@@ -19,6 +19,17 @@ public class TypeCheck {
 	}
 
 	/**
+	 * Type checking for a unary operation (Integer only)
+	 */
+	public static Type checkUnOp(Type t) {
+		if (t == Type.INT)
+			return Type.INT;
+		else {
+			return Type.ERROR;
+		}
+	}
+
+	/**
 	 * Type checking for a variable declaration (Integer only)
 	 */
 	public static Type checkDeclType(Type t) {
