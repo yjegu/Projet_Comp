@@ -97,4 +97,15 @@ public class Code3aGenerator {
 		return code;
 	}
 
+	/**
+	 *
+	 */
+	public static Code3a genLabel(String name) {
+		LabelSymbol label = new LabelSymbol(name);
+		Inst3a inst = new Inst3a(TAC.LABEL, label, null, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+
 } // Code3aGenerator ***
