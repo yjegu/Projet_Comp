@@ -25,6 +25,10 @@ s [SymbolTable symTab] returns [Code3a code]
 
 /* Instructions */
 statement [SymbolTable symTab] returns [Code3a code3a]
+  	@init
+    {
+    	code3a = new Code3a();
+    }
   	: 	
   		^(ASSIGN_KW e1=expression[symTab] IDENT 
       		(
@@ -47,10 +51,47 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     		IF_KW
     		e1=expression[symTab]
     		{
-    			
-    		} 
-    		statement[symTab] 
-    		(statement[symTab])?)
+    			LabelSymbol l_else = SymbDistrib.newLabel();
+    			LabelSymbol l_end = SymbDistrib.newLabel();
+    			code3a = Code3aGenerator.genIfExpr(e1, l_else);
+    		}
+
+    		s1 = statement[symTab]
+    		{
+    			code3a.append(s1);
+    			code3a.append(Code3aGenerator.genGoTo(l_end));
+    			code3a.append(Code3aGenerator.genLabel(l_else));
+    		}
+    		(
+    			s2 = statement[symTab]
+    			{
+    				code3a.append(s2);
+    			}
+    		)?
+    		{
+    			code3a.append(Code3aGenerator.genLabel(l_end));
+    		}
+    	)
+
+    |
+
+    	^(
+    		PRINT_KW
+    		pr=print_list[symTab]
+    	 )
+    	{
+    		code3a = pr;
+    	}
+
+    |
+
+    	^(
+    		READ_KW
+    		read_list[symTab]
+    	)
+    	{
+
+    	}
 ;
 
 /* Block of code */
@@ -79,7 +120,6 @@ block [SymbolTable symTab] returns [Code3a code3a]
     	{
       		code3a = il;
     	}
-
 ;
 
 /* Instruction list */
@@ -181,6 +221,59 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
       		expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
     	}
 ;
+
+print_list [SymbolTable symTab] returns [Code3a code3a]
+	@init
+    {
+    	code3a = new Code3a();
+    }
+	:
+		(
+			pr_list=print_item[symTab]
+			{
+				code3a.append(pr_list);
+			}
+		)+
+;
+
+print_item [SymbolTable symTab] returns [Code3a code3a]
+	:
+		TEXT
+		{
+			code3a = Code3aGenerator.genPrintString($TEXT.text);	
+		}
+
+	|
+
+		e=expression[symTab]
+		{
+
+		}
+;
+
+read_list [SymbolTable symTab] returns [Code3a code3a]
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+		(
+			rl=read_item[symTab]
+			{
+				code3a.append(rl);
+			}
+		)+
+;
+
+read_item [SymbolTable symTab] returns [Code3a code3a]
+	:
+		IDENT
+		{
+
+		}
+;
+
+
 
 /* Declarations */
 declaration [SymbolTable symTab] returns [Code3a code3a]

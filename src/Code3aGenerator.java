@@ -98,14 +98,46 @@ public class Code3aGenerator {
 	}
 
 	/**
-	 *
+	 * Create label for conditions or loops
 	 */
-	public static Code3a genLabel(String name) {
-		LabelSymbol label = new LabelSymbol(name);
-		Inst3a inst = new Inst3a(TAC.LABEL, label, null, null);
+	public static Code3a genLabel(LabelSymbol label) {
+		Inst3a inst = new Inst3a(Inst3a.TAC.LABEL, label, null, null);
 		Code3a code = new Code3a(inst);
 		return code;
 	}
 
+	/* Generate 3a code for if condition */
+	public static Code3a genIfExpr(ExpAttribute exp, LabelSymbol label) {
+		Code3a code = exp.code;
+		code.append(new Inst3a(Inst3a.TAC.IFZ, exp.place, label, null));
+		return code;
+	}
 
+	/* Generate 3a code for Goto */
+	public static Code3a genGoTo(LabelSymbol label) {
+		Inst3a inst = new Inst3a(Inst3a.TAC.GOTO, label, null, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genArg(Operand3a op) {
+		Inst3a inst = new Inst3a(Inst3a.TAC.ARG, op, null, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genCall(Operand3a f) {
+		Inst3a inst = new Inst3a(Inst3a.TAC.CALL, null, f, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genPrintString(String text) {
+		LabelSymbol printString = SymbDistrib.builtinPrintS;
+		Data3a data = new Data3a(text);
+		Code3a code = Code3aGenerator.genArg(data.getLabel());
+		code.appendData(data);
+		code.append(Code3aGenerator.genCall(printString));
+		return code;
+	}
 } // Code3aGenerator ***

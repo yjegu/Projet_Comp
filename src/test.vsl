@@ -1,5 +1,7 @@
 {
 	INT x, y
 	y:=2
-	x:=x+y
+	x:=y
+	IF y THEN x:=x+y ELSE y:=x+y FI
+	PRINT "Hello"
 }
