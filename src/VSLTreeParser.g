@@ -33,7 +33,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
   		^(ASSIGN_KW e1=expression[symTab] IDENT 
       		(
         		{
-          			code3a = Code3aGenerator.genAssignExpr(symTab, e1, $IDENT.text);
+          			code3a = Code3aGenerator.genAffExpr(symTab, e1, $IDENT.text);
         		}
       		)
     	)
@@ -222,6 +222,7 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
     	}
 ;
 
+/* Print list instructions */
 print_list [SymbolTable symTab] returns [Code3a code3a]
 	@init
     {
@@ -236,6 +237,7 @@ print_list [SymbolTable symTab] returns [Code3a code3a]
 		)+
 ;
 
+/* Print instruction */
 print_item [SymbolTable symTab] returns [Code3a code3a]
 	:
 		TEXT
@@ -247,10 +249,11 @@ print_item [SymbolTable symTab] returns [Code3a code3a]
 
 		e=expression[symTab]
 		{
-
+			code3a = Code3aGenerator.genPrintExpr(e);
 		}
 ;
 
+/* Read list instructions */
 read_list [SymbolTable symTab] returns [Code3a code3a]
 	@init
 	{
@@ -265,11 +268,12 @@ read_list [SymbolTable symTab] returns [Code3a code3a]
 		)+
 ;
 
+/* Read instruction */
 read_item [SymbolTable symTab] returns [Code3a code3a]
 	:
 		IDENT
 		{
-
+			code3a = Code3aGenerator.genReadIdent(symTab, $IDENT.text);
 		}
 ;
 

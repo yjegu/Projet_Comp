@@ -3,5 +3,5 @@
 	y:=2
 	x:=y
 	IF y THEN x:=x+y ELSE y:=x+y FI
-	PRINT "Hello"
+	PRINT x+y
 }
