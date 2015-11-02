@@ -53,7 +53,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     		{
     			LabelSymbol l_else = SymbDistrib.newLabel();
     			LabelSymbol l_end = SymbDistrib.newLabel();
-    			code3a = Code3aGenerator.genIfExpr(e1, l_else);
+    			code3a = Code3aGenerator.genIfStatement(e1, l_else);
     		}
 
     		s1 = statement[symTab]
@@ -75,6 +75,27 @@ statement [SymbolTable symTab] returns [Code3a code3a]
 
     |
 
+      ^(
+        WHILE_KW
+        {
+          LabelSymbol l_while = SymbDistrib.newLabel();
+          LabelSymbol l_end = SymbDistrib.newLabel();
+        }
+
+        e=expression[symTab]
+        {
+          code3a = Code3aGenerator.genWhileStatement(e, l_end);
+        }
+
+        st=statement[symTab]
+        {
+          code3a.append(st);
+          code3a.append(Code3aGenerator.genGoTo(l_while));
+        }
+       )
+
+    |
+
     	^(
     		PRINT_KW
     		pr=print_list[symTab]
@@ -87,10 +108,10 @@ statement [SymbolTable symTab] returns [Code3a code3a]
 
     	^(
     		READ_KW
-    		read_list[symTab]
+    		r=read_list[symTab]
     	)
     	{
-
+        code3a = r;
     	}
 ;
 

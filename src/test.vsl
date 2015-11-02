@@ -2,6 +2,7 @@
 	INT x, y
 	y:=2
 	x:=y
-	IF y THEN x:=x+y ELSE y:=x+y FI
-	PRINT x+y
+	READ x
+	PRINT x
+	WHILE 1 DO x+y DONE
 }

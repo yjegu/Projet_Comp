@@ -40,4 +40,15 @@ public class TypeCheck {
 			return Type.ERROR;
 		}
 	}
+
+	/**
+	 * Checks if the type is Integer
+	 */
+	public static boolean checkTypeInt(Type t) {
+		if (t == Type.INT)
+			return true;
+		else {
+			return false;
+		}
+	}
 }
