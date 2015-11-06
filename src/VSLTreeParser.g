@@ -23,6 +23,95 @@ s [SymbolTable symTab] returns [Code3a code]
 		}
 ;
 
+/* Prototype */
+/*proto
+	:
+		^(
+			PROTO_KW
+			type[symTab]
+			IDENT
+			{
+
+			}
+			param_list
+		)
+
+/* Functions */
+function [SymbolTable symTab] returns [Code3a code3a]
+	:
+		^(
+			FUNC_KW
+			type[symTab]
+			IDENT
+			{
+				LabelSymbol l_func = new LabelSymbol($IDENT.text);
+				if(symTab.lookup($IDENT.text) == null)
+				code3a = Code3aGenerator.genBeginFunc();
+				FunctionSymbol function = new FunctionSymbol(l_func, new FunctionType(t, false));
+
+			}
+
+			p=param_list[symTab]
+			{
+				code3a.append(p);
+			}
+
+			^(
+				BODY
+				st=statement[symTab]
+				{
+					code3a.append(st);
+				}
+			)
+			{
+				code3a.append(Code3aGenerator.genEndFunc());
+			}
+		)
+;
+
+/* Function (or proto) type */
+type [SymbolTable symTab] returns [Type typeFunc]
+	:
+		INT_KW
+		{
+			typeFunc = Type.INT;
+		}
+	|
+		VOID_KW
+		{
+			typeFunc = Type.VOID;
+		}
+;
+
+/* List of parameters of a function or proto */
+param_list [SymbolTable symTab] returns [Code3a code3a]
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+		^(
+			PARAM(
+				par=param[symTab]
+				{
+					code3a.append(par);
+				}
+			)*
+		)
+	|
+
+		PARAM
+;
+
+param [SymbolTable symTab] returns [Code3a code3a]
+	:
+		IDENT
+		{
+			code3a = Code3aGenerator.genParamFunc(symTab, $IDENT.text);
+		}
+		/* ^(ARRAY IDENT) */
+;
+
 /* Instructions */
 statement [SymbolTable symTab] returns [Code3a code3a]
   	@init
@@ -111,7 +200,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     		r=read_list[symTab]
     	)
     	{
-        code3a = r;
+        	code3a = r;
     	}
 ;
 

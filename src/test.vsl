@@ -1,8 +1,5 @@
-{
-	INT x, y
+FUNC VOID main(x, y){
 	y:=2
 	x:=y
-	READ x
-	PRINT x
-	WHILE 1 DO x+y DONE
+	WHILE 1 DO x:=x+y DONE
 }

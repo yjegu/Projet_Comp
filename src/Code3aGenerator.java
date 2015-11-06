@@ -239,4 +239,42 @@ public class Code3aGenerator {
 		}
 		return code;
 	}
+
+	public static Code3a genBeginFunc() {
+		Inst3a inst = new Inst3a(Inst3a.TAC.BEGINFUNC, null, null, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genEndFunc() {
+		Inst3a inst = new Inst3a(Inst3a.TAC.ENDFUNC, null, null, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genParamFunc(SymbolTable symTab, String name) {
+		Operand3a op = symTab.lookup(name);
+		Code3a code = null;
+
+		if(op != null) { // if the variable already exist
+			System.err.println("Error, the variable " + name + " has already been declared as a parameter");
+			System.exit(-1);
+		}
+
+		else {
+			// Create a VarSymbol of type int with a given name
+			VarSymbol var = new VarSymbol(Type.INT, name, symTab.getScope());
+
+			// Set the locale variable as a parameter
+			var.setParam();
+
+			// Insert the variable in the symbol table
+			symTab.insert(name, var);
+
+			// Generate code3a
+			code = genArg(var);
+		}
+
+		return code;
+	}
 } // Code3aGenerator ***
