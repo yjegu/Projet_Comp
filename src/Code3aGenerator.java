@@ -252,7 +252,7 @@ public class Code3aGenerator {
 		return code;
 	}
 
-	public static Code3a genParamFunc(SymbolTable symTab, String name) {
+	public static Code3a genParamFunc(SymbolTable symTab, String name, FunctionType function) {
 		Operand3a op = symTab.lookup(name);
 		Code3a code = null;
 
@@ -271,8 +271,11 @@ public class Code3aGenerator {
 			// Insert the variable in the symbol table
 			symTab.insert(name, var);
 
+			// Add the parameter in the list of arguments of the current function
+			function.extend(Type.INT);
+
 			// Generate code3a
-			code = genArg(var);
+			code = genVar(var);
 		}
 
 		return code;

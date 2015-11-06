@@ -24,20 +24,30 @@ s [SymbolTable symTab] returns [Code3a code]
 ;
 
 /* Prototype */
-/*proto
+proto [SymbolTable symTab] returns [Code3a code3a]
 	:
 		^(
 			PROTO_KW
-			type[symTab]
+			t=type[symTab]
 			IDENT
 			{
-
+				FunctionType functionType = new FunctionType(t, false);
 			}
-			param_list
+			p=param_list[symTab, functionType]
+			{
+				if(symTab.lookup($IDENT.text) == null) {
+					FunctionSymbol function = new FunctionSymbol(l_func, functionType);
+					symTab.insert($IDENT.text, function);
+				}
+				else {
+					System.err.println("The function " + $IDENT.text + " has already been declared");
+					System.exit(-1);
+				}
+			}
 		)
 
 /* Functions */
-function [SymbolTable symTab] returns [Code3a code3a]
+function [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
 	:
 		^(
 			FUNC_KW
@@ -45,13 +55,17 @@ function [SymbolTable symTab] returns [Code3a code3a]
 			IDENT
 			{
 				LabelSymbol l_func = new LabelSymbol($IDENT.text);
-				if(symTab.lookup($IDENT.text) == null)
 				code3a = Code3aGenerator.genBeginFunc();
-				FunctionSymbol function = new FunctionSymbol(l_func, new FunctionType(t, false));
+				if(symTab.lookup($IDENT.text) == null) {
+					FunctionSymbol function = new FunctionSymbol(l_func, function);
+				}
+				else {
+					// TODO
+				}
 
 			}
 
-			p=param_list[symTab]
+			p=param_list[symTab, function]
 			{
 				code3a.append(p);
 			}
@@ -84,7 +98,7 @@ type [SymbolTable symTab] returns [Type typeFunc]
 ;
 
 /* List of parameters of a function or proto */
-param_list [SymbolTable symTab] returns [Code3a code3a]
+param_list [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
 	@init
 	{
 		code3a = new Code3a();
@@ -92,7 +106,7 @@ param_list [SymbolTable symTab] returns [Code3a code3a]
 	:
 		^(
 			PARAM(
-				par=param[symTab]
+				par=param[symTab, function]
 				{
 					code3a.append(par);
 				}
@@ -103,11 +117,12 @@ param_list [SymbolTable symTab] returns [Code3a code3a]
 		PARAM
 ;
 
-param [SymbolTable symTab] returns [Code3a code3a]
+param [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
 	:
 		IDENT
 		{
-			code3a = Code3aGenerator.genParamFunc(symTab, $IDENT.text);
+			function.extend(Type.INT);
+			code3a = Code3aGenerator.genParamFunc(symTab, $IDENT.text, function);
 		}
 		/* ^(ARRAY IDENT) */
 ;
