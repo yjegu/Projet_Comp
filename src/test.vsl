@@ -1,5 +1,15 @@
-FUNC VOID main(x, y){
-	y:=2
-	x:=y
-	WHILE 1 DO x:=x+y DONE
+PROTO INT add(a, b)
+
+FUNC VOID main(a, b) {
+	INT x
+	INT y
+	READ x
+	WHILE x DO x:= a - b DONE
+	PRINT x
+}
+
+FUNC INT add(a, b) {
+	INT x
+	x:=a+b
+	RETURN x
 }

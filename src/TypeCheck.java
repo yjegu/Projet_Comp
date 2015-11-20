@@ -1,3 +1,5 @@
+import org.antlr.runtime.tree.CommonTree;
+
 /**
  * Type checking operations (NOTE: this class must be implemented by the
  * student; the methods indicated here can be seen as suggestions; note that
@@ -50,5 +52,19 @@ public class TypeCheck {
 		else {
 			return false;
 		}
+	}
+
+	/**
+	 * Checks if variable is defined
+	 */
+	public static Operand3a checkVarDefined(SymbolTable symTab, String name) {
+		Operand3a var = symTab.lookup(name);
+		
+		if(var == null) { // if variable does not exist
+			Errors.unknownIdentifier(null, name, null);
+			System.exit(-1);
+		}
+
+		return var;
 	}
 }

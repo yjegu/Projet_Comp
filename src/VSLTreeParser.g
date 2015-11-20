@@ -8,20 +8,44 @@ options {
 }
 
 /* Axiom */
-s [SymbolTable symTab] returns [Code3a code] 
+s [SymbolTable symTab] returns [Code3a code3a] 
 	:
-		e=expression[symTab] 
+		p=program[symTab]
 		{
-	 		code = e.code;
-		}
-
-	|
-
-		st=statement[symTab]
-		{
-	  		code = st;
+			code3a = p;
 		}
 ;
+
+program [SymbolTable symTab] returns [Code3a code3a]
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+
+		^(
+			PROG
+			(
+				u=unit[symTab]
+				{
+					code3a.append(u);
+				}
+			)+
+		)
+;
+
+unit [SymbolTable symTab] returns [Code3a code3a]
+    :
+    	f=function[symTab]
+    	{
+    		code3a = f;
+    	}
+    |
+    	p=proto[symTab]
+    	{
+    		code3a = p;
+    	}
+    ;
 
 /* Prototype */
 proto [SymbolTable symTab] returns [Code3a code3a]
@@ -30,44 +54,23 @@ proto [SymbolTable symTab] returns [Code3a code3a]
 			PROTO_KW
 			t=type[symTab]
 			IDENT
+			p=param_list[symTab]
 			{
-				FunctionType functionType = new FunctionType(t, false);
-			}
-			p=param_list[symTab, functionType]
-			{
-				if(symTab.lookup($IDENT.text) == null) {
-					FunctionSymbol function = new FunctionSymbol(l_func, functionType);
-					symTab.insert($IDENT.text, function);
-				}
-				else {
-					System.err.println("The function " + $IDENT.text + " has already been declared");
-					System.exit(-1);
-				}
+				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, true);
 			}
 		)
+;
 
 /* Functions */
-function [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
+function [SymbolTable symTab] returns [Code3a code3a]
 	:
 		^(
 			FUNC_KW
-			type[symTab]
+			t=type[symTab]
 			IDENT
+			p=param_list[symTab]
 			{
-				LabelSymbol l_func = new LabelSymbol($IDENT.text);
-				code3a = Code3aGenerator.genBeginFunc();
-				if(symTab.lookup($IDENT.text) == null) {
-					FunctionSymbol function = new FunctionSymbol(l_func, function);
-				}
-				else {
-					// TODO
-				}
-
-			}
-
-			p=param_list[symTab, function]
-			{
-				code3a.append(p);
+				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, false);
 			}
 
 			^(
@@ -78,6 +81,7 @@ function [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
 				}
 			)
 			{
+				symTab.leaveScope();
 				code3a.append(Code3aGenerator.genEndFunc());
 			}
 		)
@@ -98,17 +102,17 @@ type [SymbolTable symTab] returns [Type typeFunc]
 ;
 
 /* List of parameters of a function or proto */
-param_list [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
+param_list [SymbolTable symTab] returns [List<VarSymbol> vars]
 	@init
 	{
-		code3a = new Code3a();
+		vars = new ArrayList<VarSymbol>();
 	}
 	:
 		^(
 			PARAM(
-				par=param[symTab, function]
+				par=param[symTab]
 				{
-					code3a.append(par);
+					vars.add(par);
 				}
 			)*
 		)
@@ -117,12 +121,11 @@ param_list [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
 		PARAM
 ;
 
-param [SymbolTable symTab, FunctionType function] returns [Code3a code3a]
+param [SymbolTable symTab] returns [VarSymbol param]
 	:
 		IDENT
 		{
-			function.extend(Type.INT);
-			code3a = Code3aGenerator.genParamFunc(symTab, $IDENT.text, function);
+			param = Code3aGenerator.genParam(symTab, $IDENT.text);
 		}
 		/* ^(ARRAY IDENT) */
 ;
@@ -217,6 +220,15 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     	{
         	code3a = r;
     	}
+
+    |
+    	^(
+    		RETURN_KW
+    		e=expression[symTab]
+    		{
+    			code3a = Code3aGenerator.genReturn(e);
+    		}
+    	)
 ;
 
 /* Block of code */
@@ -312,7 +324,8 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
   	|
 
 	  	/* Unary negation */
-	    ^(NEGAT e=expression[symTab])
+	  	// NOT USED ANYMORE
+	    /* ^(NEGAT e=expression[symTab])
 	    {
 			Type ty = TypeCheck.checkUnOp(e.type);
 			VarSymbol temp = SymbDistrib.newTemp();
@@ -320,7 +333,7 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
 			expAtt = new ExpAttribute(ty, cod, temp);
 	    }
 
-  	|
+  	|*/
 
 	  	pe=primary_exp[symTab] 
 	    { 
