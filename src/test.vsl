@@ -4,8 +4,10 @@ FUNC VOID main(a, b) {
 	INT x
 	INT y
 	READ x
+	IF x THEN x:=2 ELSE x:=0
 	WHILE x DO x:= a - b DONE
 	PRINT x
+	PRINT main
 }
 
 FUNC INT add(a, b) {

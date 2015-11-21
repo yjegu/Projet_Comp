@@ -140,7 +140,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
   		^(ASSIGN_KW e1=expression[symTab] IDENT 
       		(
         		{
-          			code3a = Code3aGenerator.genAffExpr(symTab, e1, $IDENT.text);
+          			code3a = Code3aGenerator.genAffExpr(symTab, e1, $IDENT.text, $ASSIGN_KW);
         		}
       		)
     	)
@@ -160,7 +160,7 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     		{
     			LabelSymbol l_else = SymbDistrib.newLabel();
     			LabelSymbol l_end = SymbDistrib.newLabel();
-    			code3a = Code3aGenerator.genIfStatement(e1, l_else);
+    			code3a = Code3aGenerator.genIfStatement(e1, l_else, $IF_KW);
     		}
 
     		s1 = statement[symTab]
@@ -323,18 +323,6 @@ expression [SymbolTable symTab] returns [ExpAttribute expAtt]
 
   	|
 
-	  	/* Unary negation */
-	  	// NOT USED ANYMORE
-	    /* ^(NEGAT e=expression[symTab])
-	    {
-			Type ty = TypeCheck.checkUnOp(e.type);
-			VarSymbol temp = SymbDistrib.newTemp();
-			Code3a cod = Code3aGenerator.genUnOp(Inst3a.TAC.NEG, temp, e);
-			expAtt = new ExpAttribute(ty, cod, temp);
-	    }
-
-  	|*/
-
 	  	pe=primary_exp[symTab] 
 	    { 
 	      	expAtt = pe; 
@@ -356,6 +344,11 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
   		IDENT
     	{
       		Operand3a id = symTab.lookup($IDENT.text);
+      		if(id == null) {
+      			Errors.unknownIdentifier($IDENT, $IDENT.text, null);
+      			System.err.println("Compilation terminated");
+      			System.exit(-1);
+      		}
       		expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
     	}
 ;
@@ -411,7 +404,7 @@ read_item [SymbolTable symTab] returns [Code3a code3a]
 	:
 		IDENT
 		{
-			code3a = Code3aGenerator.genReadIdent(symTab, $IDENT.text);
+			code3a = Code3aGenerator.genReadIdent(symTab, $IDENT.text, $IDENT);
 		}
 ;
 

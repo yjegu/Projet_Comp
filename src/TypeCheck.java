@@ -57,11 +57,11 @@ public class TypeCheck {
 	/**
 	 * Checks if variable is defined
 	 */
-	public static Operand3a checkVarDefined(SymbolTable symTab, String name) {
+	public static Operand3a checkVarDefined(SymbolTable symTab, String name, CommonTree t) {
 		Operand3a var = symTab.lookup(name);
 		
 		if(var == null) { // if variable does not exist
-			Errors.unknownIdentifier(null, name, null);
+			Errors.unknownIdentifier(t, name, null);
 			System.exit(-1);
 		}
 

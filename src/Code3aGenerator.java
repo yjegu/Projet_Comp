@@ -16,8 +16,10 @@ public class Code3aGenerator {
 	}
 
 	/**
-	 * Generates the 3a statement: VAR t
-	 **/
+	 * Generate code for var
+	 * @param op the Operand3a which will be the argument
+	 * @return the code3a
+	 */
 	public static Code3a genVar(Operand3a t) {
 		Inst3a i = new Inst3a(Inst3a.TAC.VAR, t, null, null);
 		return new Code3a(i);
@@ -109,8 +111,8 @@ public class Code3aGenerator {
 	 * @param name the name of the variable which will be affected
 	 * @return the code3a
 	 */
-	public static Code3a genAffExpr(SymbolTable symTab, ExpAttribute exp, String name) {
-		Operand3a var = TypeCheck.checkVarDefined(symTab, name);
+	public static Code3a genAffExpr(SymbolTable symTab, ExpAttribute exp, String name, CommonTree token) {
+		Operand3a var = TypeCheck.checkVarDefined(symTab, name, token);
 
 		if(exp.type.isCompatible(var.type)) { // if variable has correct type
 			// COPY -> var = exp.place
@@ -120,39 +122,10 @@ public class Code3aGenerator {
 		}
 
 		else {
-			Errors.incompatibleTypes(null, var.type, exp.type, null);
+			Errors.incompatibleTypes(token, var.type, exp.type, null);
 			System.exit(-1);
 		}
 		return exp.code;
-	}
-
-	/**
-	 * Generate code for variable declaration
-	 * @param symTab the symbol table
-	 * @param name the name of the variable which will be defined
-	 * @return the code3a
-	 */
-	public static Code3a genDeclVar(SymbolTable symTab, String name) {
-		Operand3a var = symTab.lookup(name);
-		Code3a code = null;
-
-		if(var != null) { // if the variable already exist
-			System.err.println("Error, the variable " + name + " has already been declared");
-			System.exit(-1);
-		}
-
-		else {
-			// Create a VarSymbol of type int with a given name
-			var = new VarSymbol(Type.INT, name, symTab.getScope());
-			
-			// Insert the variable in the symbol table
-			symTab.insert(name, var);
-
-			// Generate code3a
-			code = genVar(var);
-		}
-
-		return code;
 	}
 
 	/**
@@ -161,9 +134,8 @@ public class Code3aGenerator {
 	 * @param label the label to jump to
 	 * @return the code3a
 	 */
-	public static Code3a genIfStatement(ExpAttribute exp, LabelSymbol label) {
+	public static Code3a genIfStatement(ExpAttribute exp, LabelSymbol label, CommonTree token) {
 		Code3a code = exp.code;
-
 		// IFZ -> ifz exp.place goto label
 		code.append(new Inst3a(Inst3a.TAC.IFZ, exp.place, label, null));
 		return code;
@@ -202,7 +174,8 @@ public class Code3aGenerator {
 	 */
 	public static Code3a genPrintExpr(ExpAttribute exp) {
 		if(!(TypeCheck.checkTypeInt(exp.type))) {
-			System.err.println("The result of expression to print is not an integer");
+			Errors.miscError(null, "The result of the expression is not an integer");
+			System.err.println("Compilation terminated");
 			System.exit(-1);
 		}
 
@@ -220,33 +193,67 @@ public class Code3aGenerator {
 	 * @param name the name of the variable which will be read
 	 * @return the code3a
 	 */
-	public static Code3a genReadIdent(SymbolTable symTab, String name) {
+	public static Code3a genReadIdent(SymbolTable symTab, String name, CommonTree token) {
 		Code3a code = null;
-		Operand3a ident = symTab.lookup(name);
+		Operand3a ident = TypeCheck.checkVarDefined(symTab, name, token);
 		LabelSymbol readIdent = SymbDistrib.builtinRead;
-		if(ident == null) {
-			System.err.println("Error, the variable " + name + " does not exist");
-			System.exit(-1);
-		}
-
-		else {
-			code = new Code3a(new Inst3a(Inst3a.TAC.CALL, ident, readIdent, null));
-		}
+		code = new Code3a(new Inst3a(Inst3a.TAC.CALL, ident, readIdent, null));
 		return code;
 	}
 
+	/**
+	 * Generate code for variable declaration
+	 * @param symTab the symbol table
+	 * @param name the name of the variable which will be defined
+	 * @return the code3a
+	 */
+	public static Code3a genDeclVar(SymbolTable symTab, String name) {
+		Code3a code = null;
+		Operand3a var = symTab.lookup(name);
+
+		// If the variable has already been declared
+		if(var != null) {
+			Errors.redefinedIdentifier(null, name, null);
+		}
+		
+		// Create a VarSymbol of type int with a given name
+		var = new VarSymbol(Type.INT, name, symTab.getScope());
+		
+		// Insert the variable in the symbol table
+		symTab.insert(name, var);
+
+		// Generate code3a
+		code = genVar(var);
+
+		return code;
+	}
+
+	/**
+	 * Generate code for marker beginfunc
+	 * @return the code3a
+	 */
 	public static Code3a genBeginFunc() {
 		Inst3a inst = new Inst3a(Inst3a.TAC.BEGINFUNC, null, null, null);
 		Code3a code = new Code3a(inst);
 		return code;
 	}
 
+	/**
+	 * Generate code for marker endfunc
+	 * @return the code3a
+	 */
 	public static Code3a genEndFunc() {
 		Inst3a inst = new Inst3a(Inst3a.TAC.ENDFUNC, null, null, null);
 		Code3a code = new Code3a(inst);
 		return code;
 	}
-
+	
+	/**
+	 * Generate a VarSymbol (which will become a parameter of a function) with a specified name
+	 * @param symTab the Symbol Table which just allows to know its scope
+	 * @param name the variable name
+	 * @return a VarSymbol
+	 */
 	public static VarSymbol genParam(SymbolTable symTab, String name) {
 		// Create a VarSymbol of type int with a given name
 			VarSymbol var = new VarSymbol(Type.INT, name, symTab.getScope());
@@ -256,7 +263,12 @@ public class Code3aGenerator {
 
 			return var;
 	}
-
+	
+	/**
+	 * Generate code for return (function)
+	 * @param exp the expression (or value) to return
+	 * @return the code3a
+	 */
 	public static Code3a genReturn(ExpAttribute exp) {
 		Code3a code = null;
 		if(exp.place.isConstInteger() || exp.place.isVarInteger()) {
@@ -272,76 +284,126 @@ public class Code3aGenerator {
 		return code;
 	}
 
+	/**
+	 * Generate the header of a function if :\n
+	 * <ul>
+	 * <li>It's a function without prototype
+	 * <li>Just a prototype
+	 * <li>Or a function which have been defined previously in prototype
+	 * </ul> 
+	 */
 	public static Code3a genFunctionSignature(SymbolTable symTab, String name, Type returnType, List<VarSymbol> args, boolean proto) {
+		// Search if the function is in symTab
 		Operand3a function = symTab.lookup(name);
 		Code3a code = null;
+		
+		// If this function is already in symTab (by its prototype in the good case)
 		if(function != null) {
+
+			// Getting type of the function
 			FunctionType type = (FunctionType) function.type;
+			
+			// If the function in symTab is declared as function and not as prototype
 			if(!type.prototype) {
+				// Sending error
 				Errors.redefinedIdentifier(null, name, "duplicate definition of function");
 				System.exit(-1);
 			}
 
+			// If the type found of the function is not the same as in symTab
 			if(!type.getReturnType().equals(returnType)) {
+				// Sending error
 				Errors.incompatibleTypes(null, type.getReturnType(), returnType, null);
 				System.exit(-1);
 			}
 
+			// If the number of arguments found is not the same as in symTab
 			if(args.size() != type.getArguments().size()) {
+				// Sending error
 				Errors.miscError(null, "Wrong number of arguments : \nExpected : " + type.getArguments().size() + "\nFound : " + args.size());
 				System.exit(-1);
 			}
 
+			// For each arguments we check if the type found is the same as in symTab
 			for(int i = 0; i < args.size(); i++) {
 				if(!((type.getArguments().get(i)) == ((Operand3a) (args.get(i))).type)) {
-				//if(!(type.getArguments().get(i).equals(args.get(i)))) {
+					// Sending error
 					Errors.incompatibleTypes(null, args.get(i), type.getArguments().get(i), null);
 					System.exit(-1);
 				}
 			}
 		}
 
+		// Create LabelSymbol to build the function type
 		LabelSymbol l_func = new LabelSymbol(name);
+
+		// Create the FunctionType for a function or a prototype
 		FunctionType type = new FunctionType(returnType, proto);
+
+		// We extend the type of the function or prototype when we found an argument for this function/prototype
 		for(VarSymbol var : args) {
 			type.extend(var.type);
 		}
+
+		// Create the FunctionSymbol with the label and the type built previously
 		FunctionSymbol fun = new FunctionSymbol(l_func, type);
 
+		// If the function is not already on symTab then we add it
 		if(symTab.lookup(name) == null) {
 			symTab.insert(name, fun);
 		}
+
+		// Otherwise we set the functionType and also the boolean prototype of this function to false
 		else {
 			FunctionType newType = (FunctionType) (symTab.lookup(name).type);
 			newType.prototype = false;
 		}
 
+		// If it's not a prototype
 		if(!proto) {
+
+			// Generate label of the function
 			code = Code3aGenerator.genLabel(l_func);
+
+			// Generate 3a beginfunc
 			code.append(Code3aGenerator.genBeginFunc());
+
+			// It's a function so we must set up the scope
 			symTab.enterScope();
+
+			// For each argument of the function, we check if this variable has not been already declared in the same scope
 			for(VarSymbol var : args) {
+				
+				// Search parameter in symTab
 				Operand3a op = symTab.lookup(var.name);
-				if(op != null && op.getScope() == symTab.getScope()) { // if the variable already exist
+				
+				if(op != null && op.getScope() == symTab.getScope()) {
+					// Sending error
 					Errors.redefinedIdentifier(null, name, "duplicate declaration of parameter");
 					System.exit(-1);
 				}
 
 				else {
-					// Insert the variable in the symbol table
+					// Insert the variable in symTab
 					symTab.insert(var.name, var);
 
-					// Generate code3a
+					// Generate 3a code for var
 					code.append(genVar(var));
 				}
 			}
 		}
 
+		// In the case it's a prototype
 		else {
+
+			// For each argument of the function, we check if this variable has not been already declared in the same scope
 			for(VarSymbol var : args) {
+
+				// Search parameter in symTab
 				Operand3a op = symTab.lookup(var.name);
-				if(op != null && op.getScope() == symTab.getScope()) { // if the variable already exist
-					System.out.println(op);
+
+				if(op != null && op.getScope() == symTab.getScope()) {
+					// Sending error
 					Errors.redefinedIdentifier(null, name, "duplicate declaration of parameter");
 					System.exit(-1);
 				}
