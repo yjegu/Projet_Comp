@@ -13,6 +13,8 @@ s [SymbolTable symTab] returns [Code3a code3a]
 		p=program[symTab]
 		{
 			code3a = p;
+			System.out.println("symTab at the end of the program :");
+			symTab.print();
 		}
 ;
 
@@ -56,7 +58,7 @@ proto [SymbolTable symTab] returns [Code3a code3a]
 			IDENT
 			p=param_list[symTab]
 			{
-				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, true);
+				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, true, $PROTO_KW);
 			}
 		)
 ;
@@ -70,7 +72,7 @@ function [SymbolTable symTab] returns [Code3a code3a]
 			IDENT
 			p=param_list[symTab]
 			{
-				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, false);
+				code3a = Code3aGenerator.genFunctionSignature(symTab, $IDENT.text, t, p, false, $FUNC_KW);
 			}
 
 			^(
@@ -226,7 +228,20 @@ statement [SymbolTable symTab] returns [Code3a code3a]
     		RETURN_KW
     		e=expression[symTab]
     		{
-    			code3a = Code3aGenerator.genReturn(e);
+    			code3a = Code3aGenerator.genReturn(e, $RETURN_KW);
+    		}
+    	)
+
+    |
+
+    	^(
+    		FCALL_S
+    		IDENT
+    		(
+    			al=argument_list[symTab]
+    		)?
+    		{
+    			code3a = Code3aGenerator.genFunctionCallInStatement(symTab, $IDENT.text, (argument_list_return) al, $FCALL_S);
     		}
     	)
 ;
@@ -351,6 +366,36 @@ primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
       		}
       		expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
     	}
+
+    |
+
+    	^(
+    		FCALL
+    		IDENT
+    		(
+    			al=argument_list[symTab]
+    		)?
+    	)
+    	{
+    		expAtt = Code3aGenerator.genFunctionCallInPrimaryExp(symTab, $IDENT.text, (argument_list_return) al, $FCALL);
+    	}
+;
+
+argument_list [SymbolTable symTab] returns [Code3a code, List<Type> args]
+	@init
+	{
+		$code = new Code3a();
+		$args = new ArrayList<Type>();
+	}
+	:
+		(
+			e=expression[symTab]
+			{
+				$args.add(e.type);
+				$code.append(e.code);
+				$code.append(Code3aGenerator.genArg(e.place));
+			}
+		)+
 ;
 
 /* Print list instructions */
@@ -435,6 +480,5 @@ decl_item [SymbolTable symTab] returns [Code3a code3a]
 	  	IDENT 
 	  	{
 			code3a.append(Code3aGenerator.genDeclVar(symTab, $IDENT.text));
-			symTab.print();
-	  	}
+		}
 ;

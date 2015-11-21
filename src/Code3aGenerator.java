@@ -49,6 +49,13 @@ public class Code3aGenerator {
 		return code;
 	}
 
+	public static Code3a genCallForReturn(Operand3a r, Operand3a f) {
+		// CALL -> r = call f
+		Inst3a inst = new Inst3a(Inst3a.TAC.CALL, r, f, null);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
 	/**
 	 * Generate code for label
 	 * @param label the label to create
@@ -225,6 +232,9 @@ public class Code3aGenerator {
 		// Generate code3a
 		code = genVar(var);
 
+		System.out.println("symTab after declaring variable " + name + " :");
+		symTab.print();
+
 		return code;
 	}
 
@@ -269,7 +279,7 @@ public class Code3aGenerator {
 	 * @param exp the expression (or value) to return
 	 * @return the code3a
 	 */
-	public static Code3a genReturn(ExpAttribute exp) {
+	public static Code3a genReturn(ExpAttribute exp, CommonTree token) {
 		Code3a code = null;
 		if(exp.place.isConstInteger() || exp.place.isVarInteger()) {
 			Inst3a inst = new Inst3a(Inst3a.TAC.RETURN, exp.place, null, null);
@@ -277,7 +287,7 @@ public class Code3aGenerator {
 		}
 
 		else {
-			Errors.miscError(null, "Cannot return in function :\nFound:" + exp.type);
+			Errors.miscError(token, "Cannot return in function :\nFound:" + exp.type);
 			System.exit(-1);
 		}
 
@@ -292,7 +302,7 @@ public class Code3aGenerator {
 	 * <li>Or a function which have been defined previously in prototype
 	 * </ul> 
 	 */
-	public static Code3a genFunctionSignature(SymbolTable symTab, String name, Type returnType, List<VarSymbol> args, boolean proto) {
+	public static Code3a genFunctionSignature(SymbolTable symTab, String name, Type returnType, List<VarSymbol> args, boolean proto, CommonTree token) {
 		// Search if the function is in symTab
 		Operand3a function = symTab.lookup(name);
 		Code3a code = null;
@@ -306,21 +316,21 @@ public class Code3aGenerator {
 			// If the function in symTab is declared as function and not as prototype
 			if(!type.prototype) {
 				// Sending error
-				Errors.redefinedIdentifier(null, name, "duplicate definition of function");
+				Errors.redefinedIdentifier(token, name, "duplicate definition of function");
 				System.exit(-1);
 			}
 
 			// If the type found of the function is not the same as in symTab
 			if(!type.getReturnType().equals(returnType)) {
 				// Sending error
-				Errors.incompatibleTypes(null, type.getReturnType(), returnType, null);
+				Errors.incompatibleTypes(token, type.getReturnType(), returnType, null);
 				System.exit(-1);
 			}
 
 			// If the number of arguments found is not the same as in symTab
 			if(args.size() != type.getArguments().size()) {
 				// Sending error
-				Errors.miscError(null, "Wrong number of arguments : \nExpected : " + type.getArguments().size() + "\nFound : " + args.size());
+				Errors.miscError(token, "Wrong number of arguments : \nExpected : " + type.getArguments().size() + "\nFound : " + args.size());
 				System.exit(-1);
 			}
 
@@ -328,7 +338,7 @@ public class Code3aGenerator {
 			for(int i = 0; i < args.size(); i++) {
 				if(!((type.getArguments().get(i)) == ((Operand3a) (args.get(i))).type)) {
 					// Sending error
-					Errors.incompatibleTypes(null, args.get(i), type.getArguments().get(i), null);
+					Errors.incompatibleTypes(token, args.get(i), type.getArguments().get(i), null);
 					System.exit(-1);
 				}
 			}
@@ -379,7 +389,7 @@ public class Code3aGenerator {
 				
 				if(op != null && op.getScope() == symTab.getScope()) {
 					// Sending error
-					Errors.redefinedIdentifier(null, name, "duplicate declaration of parameter");
+					Errors.redefinedIdentifier(token, name, "duplicate declaration of parameter");
 					System.exit(-1);
 				}
 
@@ -391,6 +401,8 @@ public class Code3aGenerator {
 					code.append(genVar(var));
 				}
 			}
+			System.out.println("symTab after declaring function " + name + " :");
+			symTab.print();
 		}
 
 		// In the case it's a prototype
@@ -404,10 +416,112 @@ public class Code3aGenerator {
 
 				if(op != null && op.getScope() == symTab.getScope()) {
 					// Sending error
-					Errors.redefinedIdentifier(null, name, "duplicate declaration of parameter");
+					Errors.redefinedIdentifier(token, name, "duplicate declaration of parameter");
 					System.exit(-1);
 				}
 			}
+			System.out.println("symTab after declaring prototype " + name + " :");
+			symTab.print();
+		}
+
+		return code;
+	}
+
+	/**
+	 * Generates code3a for calling function in a primary expression
+	 * It uses VSLTreeParser.argument_list_return type because the return type of the rule argument_list is a Code3a and a List of Type object
+	 * @param symTab the SymbolTable
+	 * @param name the function name to be called
+	 * @param args the arguments associated to this function
+	 * @param token the node of the CommonTree used for errors
+	 * @return an ExpAttribute
+	 */
+	public static ExpAttribute genFunctionCallInPrimaryExp(SymbolTable symTab, String name, VSLTreeParser.argument_list_return foundArgs, CommonTree token) {
+		ExpAttribute exp = null;
+		Operand3a function = TypeCheck.checkVarDefined(symTab, name, token);
+
+		if(((FunctionType) function.type).getReturnType().equals(Type.VOID)) {
+			Errors.miscError(token, "The function " + name + " with VOID return type cannot be applied to a primary expression");
+			System.exit(-1);
+		}
+
+		List<Type> expectedArgs = ((FunctionType) function.type).getArguments();
+
+		if((foundArgs == null && expectedArgs == null) ||
+			(foundArgs == null && expectedArgs.size() == 0) ||
+			(foundArgs != null && foundArgs.args.size() == expectedArgs.size())) {
+
+			for (int i = 0; i < expectedArgs.size(); i++) {
+				Type expectedArgType = expectedArgs.get(i);
+				Type foundArgType = foundArgs.args.get(i);
+
+				if(expectedArgType != foundArgType) {
+					Errors.incompatibleTypes(token, expectedArgType, foundArgType, "Location : Argument " + i + " of function " + name);
+					System.exit(-1);
+				}
+			}
+
+			Type t = function.type;
+			VarSymbol v = SymbDistrib.newTemp();
+			Code3a code = genVar(v);
+
+			if(foundArgs != null) {
+				code.append(foundArgs.code);
+			}
+
+			code.append(genCallForReturn(v, function));
+			exp = new ExpAttribute(t, code, v);
+		}
+
+		else {
+			Errors.miscError(token, "Bad number of arguments :\nRequired: " + expectedArgs.size() + "\nFound: " + foundArgs.args.size());
+			System.exit(-1);
+		}
+
+		return exp;
+	}
+
+	/**
+	 * Generates code3a for calling function in a statement
+	 * It uses VSLTreeParser.argument_list_return type because the return type of the rule argument_list is a Code3a and a List of Type object
+	 * @param symTab the SymbolTable
+	 * @param name the function name to be called
+	 * @param args the arguments associated to this function
+	 * @param token the node of the CommonTree used for errors
+	 * @return an ExpAttribute
+	 */
+	public static Code3a genFunctionCallInStatement(SymbolTable symTab, String name, VSLTreeParser.argument_list_return foundArgs, CommonTree token) {
+		Code3a code = null;
+		Operand3a function = TypeCheck.checkVarDefined(symTab, name, token);
+
+		List<Type> expectedArgs = ((FunctionType) function.type).getArguments();
+
+		if((foundArgs == null && expectedArgs == null) ||
+			(foundArgs == null && expectedArgs.size() == 0) ||
+			(foundArgs != null && foundArgs.args.size() == expectedArgs.size())) {
+
+			for (int i = 0; i < expectedArgs.size(); i++) {
+				Type expectedArgType = expectedArgs.get(i);
+				Type foundArgType = foundArgs.args.get(i);
+
+				if(expectedArgType != foundArgType) {
+					Errors.incompatibleTypes(token, expectedArgType, foundArgType, "Location : Argument " + i + " of function " + name);
+					System.exit(-1);
+				}
+			}
+
+			code = new Code3a();
+
+			if(foundArgs != null) {
+				code.append(foundArgs.code);
+			}
+
+			code.append(genCall(function));
+		}
+
+		else {
+			Errors.miscError(token, "Bad number of arguments :\nRequired: " + expectedArgs.size() + "\nFound: " + foundArgs.args.size());
+			System.exit(-1);
 		}
 
 		return code;

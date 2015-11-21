@@ -1,17 +1,18 @@
 PROTO INT add(a, b)
-
-FUNC VOID main(a, b) {
-	INT x
-	INT y
-	READ x
-	IF x THEN x:=2 ELSE x:=0
-	WHILE x DO x:= a - b DONE
-	PRINT x
-	PRINT main
-}
+PROTO INT sub(a, b)
 
 FUNC INT add(a, b) {
 	INT x
 	x:=a+b
 	RETURN x
+}
+
+FUNC VOID main(a, b) {
+	INT x
+	INT y
+	READ x
+	IF x THEN x:=2 ELSE x:=0 FI
+	WHILE x+add(x, y) DO x:= a - b DONE
+	add(x, y)
+	PRINT x
 }
