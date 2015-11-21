@@ -1,4 +1,5 @@
 import java.util.List;
+import java.util.ArrayList;
 import org.antlr.runtime.tree.CommonTree;
 
 /**
@@ -80,6 +81,20 @@ public class Code3aGenerator {
 		return code;
 	}
 
+	public static Code3a genTabVar(VarSymbol var, Operand3a op, ExpAttribute exp) {
+		// TABVAR -> var = op[exp.place]
+		Inst3a inst = new Inst3a(Inst3a.TAC.TABVAR, var, op, exp.place);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
+	public static Code3a genVarTab(ExpArrayAttribute array, Operand3a op) {
+		// VARTAB -> ...
+		Inst3a inst = new Inst3a(Inst3a.TAC.VARTAB, array.place, array.i.place, op);
+		Code3a code = new Code3a(inst);
+		return code;
+	}
+
 	/**
 	 * Generate code for a binary operation like +, -, * and /
 	 * @param op must be a code op: Inst3a.TAC.ADD or SUB or MUL or DIV
@@ -121,7 +136,7 @@ public class Code3aGenerator {
 	public static Code3a genAffExpr(SymbolTable symTab, ExpAttribute exp, String name, CommonTree token) {
 		Operand3a var = TypeCheck.checkVarDefined(symTab, name, token);
 
-		if(exp.type.isCompatible(var.type)) { // if variable has correct type
+		if(var.type.isCompatible(exp.place.type) || exp.place.type.equals(Type.I_CONST)) { // if variable has correct type
 			// COPY -> var = exp.place
 			Inst3a inst = new Inst3a(Inst3a.TAC.COPY, var, exp.place, null);
 			Code3a code = new Code3a(inst);
@@ -129,7 +144,7 @@ public class Code3aGenerator {
 		}
 
 		else {
-			Errors.incompatibleTypes(token, var.type, exp.type, null);
+			Errors.incompatibleTypes(token, var.type, exp.place.type, null);
 			System.exit(-1);
 		}
 		return exp.code;
@@ -141,7 +156,7 @@ public class Code3aGenerator {
 	 * @param label the label to jump to
 	 * @return the code3a
 	 */
-	public static Code3a genIfStatement(ExpAttribute exp, LabelSymbol label, CommonTree token) {
+	public static Code3a genIfStatement(ExpAttribute exp, LabelSymbol label) {
 		Code3a code = exp.code;
 		// IFZ -> ifz exp.place goto label
 		code.append(new Inst3a(Inst3a.TAC.IFZ, exp.place, label, null));
@@ -180,12 +195,6 @@ public class Code3aGenerator {
 	 * @return the code3a
 	 */
 	public static Code3a genPrintExpr(ExpAttribute exp) {
-		if(!(TypeCheck.checkTypeInt(exp.type))) {
-			Errors.miscError(null, "The result of the expression is not an integer");
-			System.err.println("Compilation terminated");
-			System.exit(-1);
-		}
-
 		LabelSymbol printExpr = SymbDistrib.builtinPrintN;
 		Code3a code = exp.code;
 		code.append(Code3aGenerator.genArg(exp.place));
@@ -214,13 +223,14 @@ public class Code3aGenerator {
 	 * @param name the name of the variable which will be defined
 	 * @return the code3a
 	 */
-	public static Code3a genDeclVar(SymbolTable symTab, String name) {
+	public static Code3a genDeclVar(SymbolTable symTab, String name, CommonTree token) {
 		Code3a code = null;
 		Operand3a var = symTab.lookup(name);
 
 		// If the variable has already been declared
-		if(var != null) {
-			Errors.redefinedIdentifier(null, name, null);
+		if(var != null && var.getScope() == symTab.getScope()) {
+			Errors.redefinedIdentifier(token, name, null);
+			System.exit(-1);
 		}
 		
 		// Create a VarSymbol of type int with a given name
@@ -236,6 +246,49 @@ public class Code3aGenerator {
 		symTab.print();
 
 		return code;
+	}
+
+	public static Code3a genDeclArray(SymbolTable symTab, String name, int size, CommonTree token) {
+		Code3a code = null;
+		Operand3a var = symTab.lookup(name);
+
+		// If the variable has already been declared
+		if(var != null && var.getScope() == symTab.getScope()) {
+			Errors.redefinedIdentifier(token, name, null);
+			System.exit(-1);
+		}
+
+		ArrayType arrayType = new ArrayType(Type.INT, size);
+		
+		// Create a VarSymbol of type int with a given name
+		var = new VarSymbol(arrayType, name, symTab.getScope());
+		
+		// Insert the variable in the symbol table
+		symTab.insert(name, var);
+
+		// Generate code3a
+		code = genVar(var);
+
+		System.out.println("symTab after declaring variable " + name + " :");
+		symTab.print();
+
+		return code;
+	}
+
+	public static ExpArrayAttribute genArrayElement(SymbolTable symTab, String name, ExpAttribute exp, CommonTree token) {
+		Operand3a array = TypeCheck.checkVarDefined(symTab, name, token);
+
+		if(!array.isArray()) {
+			Errors.miscError(token, "The variable " + name + " is not an array");
+			System.exit(-1);
+		}
+
+		VarSymbol var = SymbDistrib.newTemp();
+		Code3a code = genVar(var);
+		code.append(genTabVar(var, array, exp));
+		ExpAttribute e = new ExpAttribute(array.type, code, var);
+		return new ExpArrayAttribute(array, exp, e);
+
 	}
 
 	/**
@@ -282,8 +335,9 @@ public class Code3aGenerator {
 	public static Code3a genReturn(ExpAttribute exp, CommonTree token) {
 		Code3a code = null;
 		if(exp.place.isConstInteger() || exp.place.isVarInteger()) {
+			code = exp.code;
 			Inst3a inst = new Inst3a(Inst3a.TAC.RETURN, exp.place, null, null);
-			code = new Code3a(inst);
+			code.append(inst);
 		}
 
 		else {

@@ -47,9 +47,10 @@ public class TypeCheck {
 	 * Checks if the type is Integer
 	 */
 	public static boolean checkTypeInt(Type t) {
-		if (t == Type.INT)
+		if (t == Type.INT || t == Type.I_CONST)
 			return true;
 		else {
+			System.out.println(t);
 			return false;
 		}
 	}
