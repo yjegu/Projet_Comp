@@ -4,9 +4,9 @@ PROTO INT sub(a, b)
 FUNC INT add(a, b) {
 	INT x
 	INT t[3]
-	t[0] = 1
-	t[1] = 2
-	t[2] = 3
+	t[0] := 1
+	t[1] := 2
+	t[2] := 3
 	x:=a+b
 	RETURN x
 }

@@ -23,9 +23,9 @@ if test "$1" = ""
     exit 1;
     fi
 
-DIR=/share/m1info/cross-mips/cross-tool/mips/
+DIR=~/Téléchargements/lib_nachos
 
 cd test
 
-$DIR/cross-cc -x assembler-with-cpp -c  -G0  -c $1.s
-$DIR/cross-ld  -T ../lib/ldscript.lds ../lib/sys.o ../lib/libnachos.o $1.o -o $1
+$DIR/mips-gcc -x assembler-with-cpp -c  -G0  -c $1.s
+$DIR/mips-ld  -T ../lib/ldscript.lds ../lib/sys.o ../lib/libnachos.o $1.o -o $1

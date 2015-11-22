@@ -1,6 +1,8 @@
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.logging.*;
+import java.io.PrintStream;
+import java.io.File;
 
 import org.antlr.runtime.ANTLRFileStream;
 import org.antlr.runtime.CommonTokenStream;
@@ -82,7 +84,7 @@ public class VslComp {
 				// the three-address code into MIPS assembly.
 				
 				// A DECOMMENTER AU MOMENT DE MIPS
-				// MIPSCodeGenerator cg = new MIPSCodeGenerator(System.out); // NOT NEEDED AT THE BEGINNING
+				MIPSCodeGenerator cg = new MIPSCodeGenerator(new PrintStream(new File("../nachos/test/file.s"))); // NOT NEEDED AT THE BEGINNING
 					
 				// NOTE: if necessary, uncomment the call to addStubMain
 				// to add the header and footer for the main function.
@@ -90,13 +92,13 @@ public class VslComp {
 				// emulator.
 
 				// A DECOMMENTER AU MOMENT DE MIPS
-				// code = cg.addStubMain(code);  // NOT NEEDED AT THE BEGINNING
+				code = cg.addStubMain(code);  // NOT NEEDED AT THE BEGINNING
 					
 				// Generates the actual MIPS code, printing it to the
 				// stream chosen previously (by default, System.out).
 
 				// A DECOMMENTER AU MOMENT DE MIPS
-				// cg.genCode(code);  // NOT NEEDED AT THE BEGINNING
+				cg.genCode(code);  // NOT NEEDED AT THE BEGINNING
 				// The rest of the main function are standard error handlers.
 			} catch (Exception e) {
 				System.err.println(e.getMessage());

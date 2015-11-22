@@ -18,16 +18,15 @@ s [SymbolTable symTab] returns [Code3a code3a]
 		}
 ;
 
+/* Program */
 program [SymbolTable symTab] returns [Code3a code3a]
 	@init
 	{
 		code3a = new Code3a();
 	}
 	:
-
 		^(
-			PROG
-			(
+			PROG(
 				u=unit[symTab]
 				{
 					code3a.append(u);
@@ -36,13 +35,18 @@ program [SymbolTable symTab] returns [Code3a code3a]
 		)
 ;
 
+/* Unit (function or prototype) */
 unit [SymbolTable symTab] returns [Code3a code3a]
     :
+    	/* Function */
     	f=function[symTab]
     	{
     		code3a = f;
     	}
+
     |
+
+    	/* Prototype */
     	p=proto[symTab]
     	{
     		code3a = p;
@@ -63,7 +67,7 @@ proto [SymbolTable symTab] returns [Code3a code3a]
 		)
 ;
 
-/* Functions */
+/* Function */
 function [SymbolTable symTab] returns [Code3a code3a]
 	:
 		^(
@@ -92,11 +96,14 @@ function [SymbolTable symTab] returns [Code3a code3a]
 /* Function (or proto) type */
 type [SymbolTable symTab] returns [Type typeFunc]
 	:
+		/* Type INT */
 		INT_KW
 		{
 			typeFunc = Type.INT;
 		}
+
 	|
+		/* Type VOID */
 		VOID_KW
 		{
 			typeFunc = Type.VOID;
@@ -110,6 +117,7 @@ param_list [SymbolTable symTab] returns [List<VarSymbol> vars]
 		vars = new ArrayList<VarSymbol>();
 	}
 	:
+		/* One or more parameter(s) */
 		^(
 			PARAM(
 				par=param[symTab]
@@ -118,183 +126,207 @@ param_list [SymbolTable symTab] returns [List<VarSymbol> vars]
 				}
 			)*
 		)
+
 	|
 
+		/* No parameter */
 		PARAM
 ;
 
-param [SymbolTable symTab] returns [VarSymbol param]
+/* Parameter */
+param [SymbolTable symTab] returns [VarSymbol par]
 	:
+		/* simple parameter (int type) */
 		IDENT
 		{
-			param = Code3aGenerator.genParam(symTab, $IDENT.text);
+			par = Code3aGenerator.genParam(symTab, $IDENT.text);
 		}
 
 	|
 
+		/* parameter for array (pointer type) */
 		^(
 			ARRAY
 			IDENT
+			{
+				par = Code3aGenerator.genArrayParam(symTab, $IDENT.text);
+			}
 		)
 ;
 
 /* Instructions */
 statement [SymbolTable symTab] returns [Code3a code3a]
-  	@init
-    {
-    	code3a = new Code3a();
-    }
-  	: 	
-  		^(
-  			ASSIGN_KW
-  			e1=expression[symTab] 
-  			(
-  				(
-  					IDENT
-        			{
-          				code3a = Code3aGenerator.genAffExpr(symTab, e1, $IDENT.text, $ASSIGN_KW);
-        			}
-      			)
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+		/* Assignment */
+		^(
+			ASSIGN_KW
+			e1=expression[symTab]
+			(
+			/* Assignment of an ident */
+				(
+					IDENT
+					{
+						code3a = Code3aGenerator.genAffExpr(symTab, e1, $IDENT.text, $ASSIGN_KW);
+					}
+				)
 
-      			|
+			|
 
-      			(
-      				a=array_elem[symTab]
-      				{
-      					code3a = e1.code;
-      					code3a.append(Code3aGenerator.genVarTab(a, e1.place));
-      				}
-      			)
-      		)
-    	)
+				/* Assignment of an array item */
+				(
+					a=array_elem[symTab]
+				)
+					{
+						code3a = e1.code;
+						code3a.append(Code3aGenerator.genVarTab(a, e1.place));
+					}
+			)
+		)
 
   	|
 
-  		b=block[symTab]
-    	{
-        	code3a = b;
-    	}
+		/* Block */
+		b=block[symTab]
+		{
+			code3a = b;
+		}
 
-    |
+	|
 
-    	^(
-    		IF_KW
-    		e1=expression[symTab]
-    		{
-    			LabelSymbol l_else = SymbDistrib.newLabel();
-    			LabelSymbol l_end = SymbDistrib.newLabel();
-    			code3a = Code3aGenerator.genIfStatement(e1, l_else);
-    		}
+		/* If condition (with or without else part) */
+		^(
+			IF_KW
+			e1=expression[symTab]
+			{
+				LabelSymbol l_else = SymbDistrib.newLabel();
+				LabelSymbol l_end = SymbDistrib.newLabel();
+				code3a = Code3aGenerator.genIfStatement(e1, l_else);
+			}
 
-    		s1 = statement[symTab]
-    		{
-    			code3a.append(s1);
-    			code3a.append(Code3aGenerator.genGoTo(l_end));
-    			code3a.append(Code3aGenerator.genLabel(l_else));
-    		}
-    		(
-    			s2 = statement[symTab]
-    			{
-    				code3a.append(s2);
-    			}
-    		)?
-    		{
-    			code3a.append(Code3aGenerator.genLabel(l_end));
-    		}
-    	)
+			s1 = statement[symTab]
+			{
+				code3a.append(s1);
+				code3a.append(Code3aGenerator.genGoTo(l_end));
+				code3a.append(Code3aGenerator.genLabel(l_else));
+			}
+			(
+				s2 = statement[symTab]
+				{
+					code3a.append(s2);
+				}
+			)?
+			{
+				code3a.append(Code3aGenerator.genLabel(l_end));
+			}
+		)
 
-    |
+	|
 
-      ^(
-        WHILE_KW
-        {
-          LabelSymbol l_while = SymbDistrib.newLabel();
-          LabelSymbol l_end = SymbDistrib.newLabel();
-        }
+		/* While loop */
+		^(
+			WHILE_KW
+			{
+				LabelSymbol l_while = SymbDistrib.newLabel();
+				LabelSymbol l_end = SymbDistrib.newLabel();
+			}
 
-        e=expression[symTab]
-        {
-        	code3a = Code3aGenerator.genLabel(l_while);
-			code3a.append(Code3aGenerator.genWhileStatement(e, l_end));
-        }
+			e=expression[symTab]
+			{
+				code3a = Code3aGenerator.genLabel(l_while);
+				code3a.append(Code3aGenerator.genWhileStatement(e, l_end));
+			}
 
-        st=statement[symTab]
-        {
-          code3a.append(st);
-          code3a.append(Code3aGenerator.genGoTo(l_while));
-          code3a.append(Code3aGenerator.genLabel(l_end));
-        }
-       )
+			st=statement[symTab]
+			{
+				code3a.append(st);
+				code3a.append(Code3aGenerator.genGoTo(l_while));
+				code3a.append(Code3aGenerator.genLabel(l_end));
+			}
+		)
 
-    |
+	|
 
-    	^(
-    		PRINT_KW
-    		pr=print_list[symTab]
-    	 )
-    	{
-    		code3a = pr;
-    	}
+		/* Print */
+		^(
+			PRINT_KW
+			pr=print_list[symTab]
+		)
+		{
+			code3a = pr;
+		}
 
-    |
+	|
 
-    	^(
-    		READ_KW
-    		r=read_list[symTab]
-    	)
-    	{
-        	code3a = r;
-    	}
+		/* Read */
+		^(
+			READ_KW
+			r=read_list[symTab]
+		)
+		{
+			code3a = r;
+		}
 
-    |
-    	^(
-    		RETURN_KW
-    		e=expression[symTab]
-    		{
-    			code3a = Code3aGenerator.genReturn(e, $RETURN_KW);
-    		}
-    	)
+	|
 
-    |
+		/* Return */
+		^(
+			RETURN_KW
+			e=expression[symTab]
+			{
+				code3a = Code3aGenerator.genReturn(e, $RETURN_KW);
+			}
+		)
 
-    	^(
-    		FCALL_S
-    		IDENT
-    		(
-    			al=argument_list[symTab]
-    		)?
-    		{
-    			code3a = Code3aGenerator.genFunctionCallInStatement(symTab, $IDENT.text, (argument_list_return) al, $FCALL_S);
-    		}
-    	)
+	|
+
+		/* Call with or without argument */
+		^(
+			FCALL_S
+			IDENT
+			(
+				al=argument_list[symTab]
+			)?
+			{
+				code3a = Code3aGenerator.genFunctionCallInStatement(symTab, $IDENT.text, (argument_list_return) al, $FCALL_S);
+			}
+		)
 ;
 
 /* Block of code */
 block [SymbolTable symTab] returns [Code3a code3a]
-  	@init
-    {
-      code3a = new Code3a();
-    }
+	@init
+	{
+		code3a = new Code3a();
+	}
 	:
-		^(BLOCK 
-    	{
-      		symTab.enterScope();
-    	}
+		/* Declarations + statements */
+		^(
+			BLOCK 
+			{
+				symTab.enterScope();
+			}
+			d=declaration[symTab] il=inst_list[symTab]
+		)
+		{
+			code3a = d;
+			code3a.append(il);
+			symTab.leaveScope();
+		}
 
-    	d=declaration[symTab] il=inst_list[symTab])
-    	
-    	{
-      		code3a = d;
-      		code3a.append(il);
-      		symTab.leaveScope();
-    	}
+	|
 
-  |
-
-  	^(BLOCK il=inst_list[symTab])
-    	{
-      		code3a = il;
-    	}
+		/* Statements only */
+		^(
+			BLOCK
+			il=inst_list[symTab]
+		)
+		{
+			code3a = il;
+		}
 ;
 
 /* Instruction list */
@@ -314,8 +346,9 @@ inst_list [SymbolTable symTab] returns [Code3a code3a]
 		+)
 ;
 
+/* Array element */
 array_elem [SymbolTable symTab] returns [ExpArrayAttribute exp]
-    :
+	:
 		^(
 			ARELEM 
 			IDENT
@@ -326,103 +359,125 @@ array_elem [SymbolTable symTab] returns [ExpArrayAttribute exp]
 		)
 ;
 
-/* Expressions */
+/* Expression */
 expression [SymbolTable symTab] returns [ExpAttribute expAtt]
-  	:
-  		/* Addition operation */ 
-    	^(PLUS e1=expression[symTab] e2=expression[symTab]) 
-    	{ 
-	    	Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
-	      	VarSymbol temp = SymbDistrib.newTemp();
-	      	Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.ADD, temp, e1, e2);
-	      	expAtt = new ExpAttribute(ty, cod, temp);
-	    }
+	:
+		/* Addition operation */ 
+		^(
+			PLUS
+			e1=expression[symTab]
+			e2=expression[symTab]
+		)
+		{
+			Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
+			VarSymbol temp = SymbDistrib.newTemp();
+			Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.ADD, temp, e1, e2);
+			expAtt = new ExpAttribute(ty, cod, temp);
+		}
 
-  	|
+	|
 
-	  	/* Substraction operation */
-	    ^(MINUS e1=expression[symTab] e2=expression[symTab])
-	    {
-	      	Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
-	      	VarSymbol temp = SymbDistrib.newTemp();
-	      	Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.SUB, temp, e1, e2);
-	      	expAtt = new ExpAttribute(ty, cod, temp);
-	    }
+		/* Substraction operation */
+		^(
+			MINUS
+			e1=expression[symTab]
+			e2=expression[symTab]
+		)
+		{
+			Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
+			VarSymbol temp = SymbDistrib.newTemp();
+			Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.SUB, temp, e1, e2);
+			expAtt = new ExpAttribute(ty, cod, temp);
+		}
 
-  	|
+	|
 
-	  	/* Multiplication operation */
-	    ^(MUL e1=expression[symTab] e2=expression[symTab])
-	    {
+		/* Multiplication operation */
+		^(
+			MUL
+			e1=expression[symTab]
+			e2=expression[symTab]
+		)
+		{
 			Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
 			VarSymbol temp = SymbDistrib.newTemp();
 			Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.MUL, temp, e1, e2);
 			expAtt = new ExpAttribute(ty, cod, temp);
-	    }
+		}
 
-  	|
+	|
 
-	  	/* Division operation */
-	    ^(DIV e1=expression[symTab] e2=expression[symTab])
-	    {
+		/* Division operation */
+		^(
+			DIV
+			e1=expression[symTab]
+			e2=expression[symTab]
+		)
+		{
 			Type ty = TypeCheck.checkBinOp(e1.type, e2.type);
 			VarSymbol temp = SymbDistrib.newTemp();
 			Code3a cod = Code3aGenerator.genBinOp(Inst3a.TAC.DIV, temp, e1, e2);
 			expAtt = new ExpAttribute(ty, cod, temp);
-	    }
+		}
 
-  	|
+	|
 
-	  	pe=primary_exp[symTab] 
-	    { 
-	      	expAtt = pe; 
-	    }
+		/* Primary expression */
+		pe=primary_exp[symTab] 
+		{
+			expAtt = pe; 
+		}
 
 ;
 
 /* Primary expression */
 primary_exp [SymbolTable symTab] returns [ExpAttribute expAtt]
-  	:
-  		INTEGER
-    	{
-      		ConstSymbol cs = new ConstSymbol(Integer.parseInt($INTEGER.text));
-      		expAtt = new ExpAttribute(Type.INT, new Code3a(), cs);
-    	}
+	:
+		/* Simple integer */
+		INTEGER
+		{
+			ConstSymbol cs = new ConstSymbol(Integer.parseInt($INTEGER.text));
+			expAtt = new ExpAttribute(Type.INT, new Code3a(), cs);
+		}
 
-  	|
+	|
 
-  		IDENT
-    	{
-      		Operand3a id = symTab.lookup($IDENT.text);
-      		if(id == null) {
-      			Errors.unknownIdentifier($IDENT, $IDENT.text, null);
-      			System.err.println("Compilation terminated");
-      			System.exit(-1);
-      		}
-      		expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
-    	}
+		/* Ident */
+		IDENT
+		{
+			Operand3a id = symTab.lookup($IDENT.text);
+			if(id == null) {
+				Errors.unknownIdentifier($IDENT, $IDENT.text, null);
+				System.err.println("Compilation terminated");
+				System.exit(-1);
+			}
+			expAtt = new ExpAttribute(id.type, new Code3a(), symTab.lookup($IDENT.text));
+		}
 
-    |
+	|
 
-    	^(
-    		FCALL
-    		IDENT
-    		(
-    			al=argument_list[symTab]
-    		)?
-    	)
-    	{
-    		expAtt = Code3aGenerator.genFunctionCallInPrimaryExp(symTab, $IDENT.text, (argument_list_return) al, $FCALL);
-    	}
+		/* Call */
+		^(
+			FCALL
+			IDENT
+			(
+				al=argument_list[symTab]
+			)?
+		)
+		{
+			expAtt = Code3aGenerator.genFunctionCallInPrimaryExp(symTab, $IDENT.text, (argument_list_return) al, $FCALL);
+		}
 
-    |
+	|
 
-    	a=array_elem[symTab]
-    	{
-    		expAtt = a.exp;
-    	}
+		/* Array element */
+		a=array_elem[symTab]
+		{
+			expAtt = a.exp;
+		}
 ;
 
+/* List of arguments */
 argument_list [SymbolTable symTab] returns [Code3a code, List<Type> args]
 	@init
 	{
@@ -443,9 +498,9 @@ argument_list [SymbolTable symTab] returns [Code3a code, List<Type> args]
 /* Print list instructions */
 print_list [SymbolTable symTab] returns [Code3a code3a]
 	@init
-    {
-    	code3a = new Code3a();
-    }
+	{
+		code3a = new Code3a();
+	}
 	:
 		(
 			pr_list=print_item[symTab]
@@ -458,6 +513,7 @@ print_list [SymbolTable symTab] returns [Code3a code3a]
 /* Print instruction */
 print_item [SymbolTable symTab] returns [Code3a code3a]
 	:
+		/* Print simple text */
 		TEXT
 		{
 			code3a = Code3aGenerator.genPrintString($TEXT.text);	
@@ -465,6 +521,7 @@ print_item [SymbolTable symTab] returns [Code3a code3a]
 
 	|
 
+		/* Print expression */
 		e=expression[symTab]
 		{
 			code3a = Code3aGenerator.genPrintExpr(e);
@@ -489,6 +546,7 @@ read_list [SymbolTable symTab] returns [Code3a code3a]
 /* Read instruction */
 read_item [SymbolTable symTab] returns [Code3a code3a]
 	:
+		/* Read simple ident */
 		IDENT
 		{
 			code3a = Code3aGenerator.genReadIdent(symTab, $IDENT.text, $IDENT);
@@ -496,40 +554,48 @@ read_item [SymbolTable symTab] returns [Code3a code3a]
 
 	|
 
-		array_elem[symTab]
+		/* Read array element */
+		a=array_elem[symTab]
+		{
+			code3a = Code3aGenerator.genReadArray(symTab, a);
+		}
 ;
 
 
 
-/* Declarations */
+/* Declaration */
 declaration [SymbolTable symTab] returns [Code3a code3a]
-  	@init
-    {
-    	code3a = new Code3a();
-    }
-  	: 	^(DECL 
-			(value = decl_item[symTab]
-    			{
-      				code3a.append(value);
-    			}
-    		)+
-    	)
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+		^(
+			DECL 
+			(
+				value = decl_item[symTab]
+				{
+					code3a.append(value);
+				}
+			)+
+		)
 ;
 
 /* The real declaration of one precised variable */
 decl_item [SymbolTable symTab] returns [Code3a code3a]
-  	@init
-    {
-     	code3a = new Code3a();
-    }
-  	:
-	  	IDENT 
-	  	{
+	@init
+	{
+		code3a = new Code3a();
+	}
+	:
+		/* Declare simple ident (int type) */
+		IDENT 
+		{
 			code3a.append(Code3aGenerator.genDeclVar(symTab, $IDENT.text, $IDENT));
 		}
 
 	|
-
+		/* Declare array */
 		^(
 			ARDECL
 			IDENT

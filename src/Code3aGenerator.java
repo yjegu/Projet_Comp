@@ -213,7 +213,15 @@ public class Code3aGenerator {
 		Code3a code = null;
 		Operand3a ident = TypeCheck.checkVarDefined(symTab, name, token);
 		LabelSymbol readIdent = SymbDistrib.builtinRead;
-		code = new Code3a(new Inst3a(Inst3a.TAC.CALL, ident, readIdent, null));
+		code = genCallForReturn(ident, readIdent);
+		return code;
+	}
+
+	public static Code3a genReadArray(SymbolTable symTab, ExpArrayAttribute array) {
+		Code3a code = null;
+		Operand3a ident = TypeCheck.checkVarDefined(symTab, array.place.getName3a(), null);
+		LabelSymbol readArray = SymbDistrib.builtinRead;
+		code = genCallForReturn(ident, readArray);
 		return code;
 	}
 
@@ -312,19 +320,35 @@ public class Code3aGenerator {
 	}
 	
 	/**
-	 * Generate a VarSymbol (which will become a parameter of a function) with a specified name
+	 * Generate a VarSymbol of type INT (which will become a parameter of a function) with a specified name
 	 * @param symTab the Symbol Table which just allows to know its scope
 	 * @param name the variable name
 	 * @return a VarSymbol
 	 */
 	public static VarSymbol genParam(SymbolTable symTab, String name) {
 		// Create a VarSymbol of type int with a given name
-			VarSymbol var = new VarSymbol(Type.INT, name, symTab.getScope());
+		VarSymbol var = new VarSymbol(Type.INT, name, symTab.getScope());
 
-			// Set the locale variable as a parameter
-			var.setParam();
+		// Set the locale variable as a parameter
+		var.setParam();
 
-			return var;
+		return var;
+	}
+
+	/**
+	 * Generate a VarSymbol of type POINTER (which will become a parameter of a function) with a specified name
+	 * @param symTab the Symbol Table which just allows to know its scope
+	 * @param name the variable name
+	 * @return a VarSymbol
+	 */
+	public static VarSymbol genArrayParam(SymbolTable symTab, String name) {
+		// Create a VarSymbol of type pointer, because it's an array, with a given name
+		VarSymbol var = new VarSymbol(Type.POINTER, name, symTab.getScope());
+
+		// Set the locale variable as a parameter
+		var.setParam();
+
+		return var;
 	}
 	
 	/**
