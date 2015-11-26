@@ -79,12 +79,12 @@ public class VslComp {
 				// one wishes to parse just a fragment of the language (e.g.
 				// begin with an expression). >>>
 				Code3a code = tparser.s(new SymbolTable());
-				code.print();
+				//code.print();
 				// We prepare the MIPS code generator, which will compile
 				// the three-address code into MIPS assembly.
 				
 				// A DECOMMENTER AU MOMENT DE MIPS
-				MIPSCodeGenerator cg = new MIPSCodeGenerator(new PrintStream(new File("../nachos/test/file.s"))); // NOT NEEDED AT THE BEGINNING
+				MIPSCodeGenerator cg = new MIPSCodeGenerator(System.out); // NOT NEEDED AT THE BEGINNING
 					
 				// NOTE: if necessary, uncomment the call to addStubMain
 				// to add the header and footer for the main function.
@@ -92,7 +92,7 @@ public class VslComp {
 				// emulator.
 
 				// A DECOMMENTER AU MOMENT DE MIPS
-				code = cg.addStubMain(code);  // NOT NEEDED AT THE BEGINNING
+				//code = cg.addStubMain(code);  // NOT NEEDED AT THE BEGINNING
 					
 				// Generates the actual MIPS code, printing it to the
 				// stream chosen previously (by default, System.out).

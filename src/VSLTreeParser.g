@@ -13,8 +13,6 @@ s [SymbolTable symTab] returns [Code3a code3a]
 		p=program[symTab]
 		{
 			code3a = p;
-			System.out.println("symTab at the end of the program :");
-			symTab.print();
 		}
 ;
 

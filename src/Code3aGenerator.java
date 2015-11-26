@@ -171,7 +171,7 @@ public class Code3aGenerator {
 	 */
 	public static Code3a genWhileStatement(ExpAttribute exp, LabelSymbol label) {
 		Code3a code = exp.code;
-		code.append(new Inst3a(Inst3a.TAC.IFNZ, exp.place, label, null));
+		code.append(new Inst3a(Inst3a.TAC.IFZ, exp.place, label, null));
 		return code;
 	}
 
@@ -181,8 +181,9 @@ public class Code3aGenerator {
 	 * @return the code3a
 	 */
 	public static Code3a genPrintString(String text) {
+		String cleanText = text.substring(1, text.length()-1);
 		LabelSymbol printString = SymbDistrib.builtinPrintS;
-		Data3a data = new Data3a(text);
+		Data3a data = new Data3a(cleanText);
 		Code3a code = Code3aGenerator.genArg(data.getLabel());
 		code.appendData(data);
 		code.append(Code3aGenerator.genCall(printString));
@@ -250,9 +251,6 @@ public class Code3aGenerator {
 		// Generate code3a
 		code = genVar(var);
 
-		System.out.println("symTab after declaring variable " + name + " :");
-		symTab.print();
-
 		return code;
 	}
 
@@ -276,9 +274,6 @@ public class Code3aGenerator {
 
 		// Generate code3a
 		code = genVar(var);
-
-		System.out.println("symTab after declaring variable " + name + " :");
-		symTab.print();
 
 		return code;
 	}
@@ -479,8 +474,6 @@ public class Code3aGenerator {
 					code.append(genVar(var));
 				}
 			}
-			System.out.println("symTab after declaring function " + name + " :");
-			symTab.print();
 		}
 
 		// In the case it's a prototype
@@ -498,8 +491,6 @@ public class Code3aGenerator {
 					System.exit(-1);
 				}
 			}
-			System.out.println("symTab after declaring prototype " + name + " :");
-			symTab.print();
 		}
 
 		return code;

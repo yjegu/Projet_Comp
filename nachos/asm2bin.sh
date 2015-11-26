@@ -23,7 +23,7 @@ if test "$1" = ""
     exit 1;
     fi
 
-DIR=~/Téléchargements/lib_nachos
+DIR=/share/m1info/cross-mips/bin
 
 cd test
 
